@@ -10,7 +10,7 @@
 #define BUCKET_SIZE 5
 
 /// Number of bins (measurements) considered to characterize one location
-#define NO_BINS 180
+#define NO_BINS 72
 #define NO_BUCKETS SONAR_MAX/BUCKET_SIZE
 
 
@@ -153,7 +153,7 @@ void rotateSonar(float angle)
 
 void characterize_location(loc_sig ls)
 {
-	float ang = 360/NO_BINS+1.5;
+	float ang = 360/NO_BINS+2.90;
 	// Spin sonar and take readings
   for (int i=0; i < NO_BINS; i++)
   {
@@ -287,7 +287,7 @@ void recognize_location()
   	a = 0.0;
     for (int j=0; j < NO_BINS; j++)
     {
-  	   a += (pow((ls_obs.sig[(i+j)%NO_BINS] - ls_read.sig[(i+j)%NO_BINS]), 2))*100.0;
+  	   a += (pow((ls_obs.sig[(i+j)%NO_BINS] - ls_read.sig[(i+j)%NO_BINS]), 5));
     }
      writeDebugStreamLine("ANGLE SCORE: %d %f", i, a);
 
@@ -326,7 +326,6 @@ task main()
   //delete_loc_files();
 
   //learn_location();
-
 
   recognize_location();
 

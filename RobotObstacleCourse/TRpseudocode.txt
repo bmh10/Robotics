@@ -1,0 +1,45 @@
+
+---------------------------
+TR Program in Pseudocode
+---------------------------
+
+/*
+ * Making use of subsumption principles,
+ * purpose is to drive towards light source
+ * while avoiding obstacles.
+ */
+main {
+ touchSensorPressed => avoidObstacle
+ lightDetected, facingLight => driveForward
+ lightDetected, !facingLight => turnTowardsLight
+ true => scanForLight //default case when no light detected
+}
+
+/*
+ * Drives backwards for 1 second, turns a direction depending
+ * on which touch sensor was pressed then drives forwards for
+ * 1 second  
+ */
+avoidObstacle {
+  leftTouchSensorPressed => driveBackward, turnRight, driveForward
+  rightTouchSensorPressed => driveBackward, turnLeft, driveForward
+}
+
+/*
+ *  Turns towards light depending on robots current orientation
+ */
+turnTowardsLight {
+   lightOnLeft => turnLeft
+   lightOnRight => turnRight
+}
+
+/*
+ *  Turn until robot facing light
+ */
+scanForLight {
+   !facingLight => turnRight
+   true => nil
+
+}
+
+
