@@ -9,8 +9,8 @@
 #define FORWARD_CONST 1980
 #define PI 3.14159265358979
 #define DESIRED_WALL_DIST 21
-#define WALL_FOLLOW_K 0.4
-#define SENSOR_MAX 250
+#define WALL_FOLLOW_K 0.75
+#define SENSOR_MAX 100
 
 /*
  * Converts radians to degrees
@@ -59,7 +59,7 @@ void Forward(float distance)
 /*
  * Follows gap until gap found
  */
-void ForwardWallFollow()
+void ForwardWallFollow(bool sonarFacingLeft)
 {
 	writeDebugStreamLine("WALL_FOLLOW");
 
@@ -71,7 +71,7 @@ void ForwardWallFollow()
   while (true)
   {
   	sensorDist = SensorValue[sonarSensor];
-  	//if (sensorDist > SENSOR_MAX) continue; // Ignore error readings
+  	if (sensorDist > SENSOR_MAX) continue; // Ignore error readings
   	// If different between current and previous sensor reading is large, we have found a gap
   	if (abs(prevSensorDist - sensorDist) > 15 && prevSensorDist != -1)
   		count++; // Possibly found gap
@@ -79,12 +79,15 @@ void ForwardWallFollow()
     	count = 0;
     	prevSensorDist = sensorDist;
     }
-    if (count > 3)
+    if (count > 3) // && abs(var) < 10)
     	break; // Almost definately found gap
 
 
     var = WALL_FOLLOW_K*(sensorDist - DESIRED_WALL_DIST);
-    setMotorSpeeds(FORWARD_SPEED-var, FORWARD_SPEED+var);
+    //if (sonarFacingLeft)
+      setMotorSpeeds(FORWARD_SPEED-var, FORWARD_SPEED+var);
+    //else
+    	//setMotorSpeeds(FORWARD_SPEED+var, FORWARD_SPEED-var);
     writeDebugStreamLine("MOTORS: %d %f", var, sensorDist);
     //wait1Msec(1);
   }
@@ -145,8 +148,8 @@ void moveOutOfStartBlock()
   float angleToTurn = idx*360/NO_BINS;
   writeDebugStreamLine("ANGLE: %f", angleToTurn);
   // Ensure we turn smallest distance possible
-  //if (angleToTurn > 180)
-  	//angleToTurn = angleToTurn-360;
+  if (angleToTurn > 180)
+  	angleToTurn = angleToTurn-360;
 
   Turn(angleToTurn);
   Forward(40);
@@ -173,25 +176,28 @@ void executePlan1()
 {
   Turn(90);
   rotateSonar(90);
-  //TODO: Wall following here
-  Forward(30);
-  ForwardWallFollow();
+  Forward(40);
+  ForwardWallFollow(true);
   Forward(21);
   Turn(90);
   Forward(40);
   AtWaypoint(); // Waypoint 2
   Forward(-40);
   Turn(-90);
-  Forward(30);
-  ForwardWallFollow();
+  Forward(40);
+  ForwardWallFollow(true);
   Forward(21);
   Turn(90);
   Forward(40);
   AtWaypoint(); // Waypoint 3
   Forward(-40);
   Turn(90);
-  Forward(30);
-  ForwardWallFollow();
+  Forward(40);
+  rotateSonar(-180);
+  //Skip past middle gap
+  ForwardWallFollow(false);
+  Forward(50);
+  ForwardWallFollow(false);
   Forward(21);
   Turn(-90);
   Forward(40);
@@ -200,12 +206,67 @@ void executePlan1()
 
 void executePlan2()
 {
-	Turn(360);
+	Turn(-90);
+  rotateSonar(-90);
+  Forward(40);
+  ForwardWallFollow(false);
+  Forward(21);
+  Turn(-90);
+  Forward(40);
+  AtWaypoint(); // Waypoint 1
+  Forward(-40);
+  Turn(-90);
+  Forward(40);
+  rotateSonar(180);
+  // Skip past middle gap
+  ForwardWallFollow(true);
+  Forward(50);
+  ForwardWallFollow(true);
+  Forward(21);
+  Turn(90);
+  Forward(40);
+  AtWaypoint(); // Waypoint 3
+  Forward(-40);
+  Turn(90);
+  Forward(40);
+  rotateSonar(-180);
+  ForwardWallFollow(false);
+  Forward(21);
+  Turn(-90);
+  Forward(40);
+  AtWaypoint(); // Waypoint 2
 }
 
 void executePlan3()
 {
-	Turn(360);
+	Turn(-90);
+  rotateSonar(-90);
+  Forward(40);
+  ForwardWallFollow(false);
+  Forward(21);
+  Turn(-90);
+  Forward(40);
+  AtWaypoint(); // Waypoint 2
+  Forward(-40);
+  Turn(90);
+  Forward(40);
+  ForwardWallFollow(false);
+  Forward(21);
+  Turn(-90);
+  Forward(40);
+  AtWaypoint(); // Waypoint 1
+  Forward(-40);
+  Turn(-90);
+  Forward(40);
+  rotateSonar(180);
+  //Skip past middle gap
+  ForwardWallFollow(true);
+  Forward(50);
+  ForwardWallFollow(true);
+  Forward(21);
+  Turn(90);
+  Forward(40);
+  AtWaypoint(); // Waypoint 3
 }
 
 task main()
