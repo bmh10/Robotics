@@ -8,6 +8,9 @@
 #define TURN_CONST 12012
 #define FORWARD_CONST 1980
 #define PI 3.14159265358979
+#define DESIRED_WALL_DIST 21
+#define WALL_FOLLOW_K 0.4
+#define SENSOR_MAX 250
 
 /*
  * Converts radians to degrees
@@ -54,6 +57,42 @@ void Forward(float distance)
 }
 
 /*
+ * Follows gap until gap found
+ */
+void ForwardWallFollow()
+{
+	writeDebugStreamLine("WALL_FOLLOW");
+
+  int var;
+  float sensorDist;
+  float prevSensorDist = -1;
+  int count = 0;
+  //int timeLeft = (int) (distance*FORWARD_CONST/(float)FORWARD_SPEED);
+  while (true)
+  {
+  	sensorDist = SensorValue[sonarSensor];
+  	//if (sensorDist > SENSOR_MAX) continue; // Ignore error readings
+  	// If different between current and previous sensor reading is large, we have found a gap
+  	if (abs(prevSensorDist - sensorDist) > 15 && prevSensorDist != -1)
+  		count++; // Possibly found gap
+    else {
+    	count = 0;
+    	prevSensorDist = sensorDist;
+    }
+    if (count > 3)
+    	break; // Almost definately found gap
+
+
+    var = WALL_FOLLOW_K*(sensorDist - DESIRED_WALL_DIST);
+    setMotorSpeeds(FORWARD_SPEED-var, FORWARD_SPEED+var);
+    writeDebugStreamLine("MOTORS: %d %f", var, sensorDist);
+    //wait1Msec(1);
+  }
+  setMotorSpeeds(0, 0);
+  PlayImmediateTone(500, 30);
+}
+
+/*
  * +ve angles are anticlockwise, angle in degrees
  */
 void Turn(float a)
@@ -83,7 +122,7 @@ void moveOutOfStartBlock()
     rotateSonar(ang);
     // Save dist in loc_sig instance ls
     dists[i] = SensorValue[sonarSensor];
-    writeDebugStreamLine("DIST: %d %d", i, dists[i]);
+    //writeDebugStreamLine("DIST: %d %d", i, dists[i]);
 
     if (dists[i] > BOX_THRESHOLD && startIdx == -1)
   	{
@@ -100,14 +139,14 @@ void moveOutOfStartBlock()
   // Unspin sonar back to start position
   rotateSonar(-360);
 
-  writeDebugStreamLine("S: %d E: %d", startIdx, endIdx);
+  //writeDebugStreamLine("S: %d E: %d", startIdx, endIdx);
 
   int idx = (startIdx+endIdx)/2;
   float angleToTurn = idx*360/NO_BINS;
   writeDebugStreamLine("ANGLE: %f", angleToTurn);
   // Ensure we turn smallest distance possible
   //if (angleToTurn > 180)
-  	//angleToTurn = angleToTurn-260;
+  	//angleToTurn = angleToTurn-360;
 
   Turn(angleToTurn);
   Forward(40);
@@ -135,21 +174,27 @@ void executePlan1()
   Turn(90);
   rotateSonar(90);
   //TODO: Wall following here
-  Forward(252);
+  Forward(30);
+  ForwardWallFollow();
+  Forward(21);
   Turn(90);
-  Forward(20);
+  Forward(40);
   AtWaypoint(); // Waypoint 2
-  Forward(-20);
+  Forward(-40);
   Turn(-90);
-  Forward(252);
+  Forward(30);
+  ForwardWallFollow();
+  Forward(21);
   Turn(90);
-  Forward(20);
+  Forward(40);
   AtWaypoint(); // Waypoint 3
-  Forward(-20);
+  Forward(-40);
   Turn(90);
-  Forward(504);
+  Forward(30);
+  ForwardWallFollow();
+  Forward(21);
   Turn(-90);
-  Forward(20);
+  Forward(40);
   AtWaypoint(); // Waypoint 1
 }
 
