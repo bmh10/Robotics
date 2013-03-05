@@ -22,6 +22,12 @@ float degToRad(float a)
 	return a*(PI/180);
 }
 
+void AtWaypoint()
+{
+	PlayImmediateTone(500, 30);
+  wait1Msec(1000);
+}
+
 void setMotorSpeeds(int lspeed, int rspeed)
 {
 	motor[motorB] = lspeed;
@@ -38,10 +44,11 @@ void rotateSonar(float angle)
 
 void Forward(float distance)
 {
-	setMotorSpeeds(FORWARD_SPEED, FORWARD_SPEED);
+	int i = (distance < 0) ? -1 : 1;
+	setMotorSpeeds(i*FORWARD_SPEED, i*FORWARD_SPEED);
 	writeDebugStreamLine("FORWARD: %f", distance);
 
-  int timeLeft = (int) (distance*FORWARD_CONST/(float)FORWARD_SPEED);
+  int timeLeft = (int) (i*distance*FORWARD_CONST/(float)FORWARD_SPEED);
   wait1Msec(timeLeft);
   setMotorSpeeds(0, 0);
 }
@@ -76,17 +83,20 @@ void moveOutOfStartBlock()
     rotateSonar(ang);
     // Save dist in loc_sig instance ls
     dists[i] = SensorValue[sonarSensor];
-    writeDebugStreamLine("DIST: %d", dists[i]);
+    writeDebugStreamLine("DIST: %d %d", i, dists[i]);
 
     if (dists[i] > BOX_THRESHOLD && startIdx == -1)
   	{
-  		startIdx = dists[i];
+  		startIdx = i;
     }
     else if (startIdx != -1 && endIdx == -1 && dists[i] < BOX_THRESHOLD)
     {
-  		endIdx = dists[i];
+  		endIdx = i;
     }
   }
+  if (endIdx == -1)
+  	endIdx = NO_BINS;
+
   // Unspin sonar back to start position
   rotateSonar(-360);
 
@@ -94,9 +104,15 @@ void moveOutOfStartBlock()
 
   int idx = (startIdx+endIdx)/2;
   float angleToTurn = idx*360/NO_BINS;
+  writeDebugStreamLine("ANGLE: %f", angleToTurn);
+  // Ensure we turn smallest distance possible
+  //if (angleToTurn > 180)
+  	//angleToTurn = angleToTurn-260;
+
   Turn(angleToTurn);
-  Forward(20);
+  Forward(40);
 }
+
 
 int determineStartPosition()
 {
@@ -107,21 +123,59 @@ int determineStartPosition()
 	rightDist = SensorValue[sonarSensor];
 	rotateSonar(90);
 
+	if (leftDist > 100 && rightDist < 100) return 1;
+	if (leftDist > 100 && rightDist > 100) return 2;
+	if (leftDist < 100 && rightDist > 100) return 3;
 
-	return 0;
+  return -1;
+}
+
+void executePlan1()
+{
+  Turn(90);
+  rotateSonar(90);
+  //TODO: Wall following here
+  Forward(252);
+  Turn(90);
+  Forward(20);
+  AtWaypoint(); // Waypoint 2
+  Forward(-20);
+  Turn(-90);
+  Forward(252);
+  Turn(90);
+  Forward(20);
+  AtWaypoint(); // Waypoint 3
+  Forward(-20);
+  Turn(90);
+  Forward(504);
+  Turn(-90);
+  Forward(20);
+  AtWaypoint(); // Waypoint 1
+}
+
+void executePlan2()
+{
+	Turn(360);
+}
+
+void executePlan3()
+{
+	Turn(360);
 }
 
 task main()
 {
-
   moveOutOfStartBlock();
   int startPos = determineStartPosition();
-  /*switch (startPos)
+  writeDebugStreamLine("START POS: %d", startPos);
+  if (startPos == -1) return;
+
+  switch (startPos)
   {
-    case 0: executePlan0(); break;
     case 1: executePlan1(); break;
     case 2: executePlan2(); break;
-  }*/
+    case 3: executePlan3(); break;
+  }
 
-
+  wait10Msec(1000);
 }
