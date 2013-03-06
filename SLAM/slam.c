@@ -1,15 +1,19 @@
-#pragma config(Sensor, S4,     sonarSensor,         sensorSONAR)
+#pragma config(Sensor, S1, touchSensorL, sensorTouch)
+#pragma config(Sensor, S2, touchSensorR, sensorTouch)
+#pragma config(Sensor, S4, sonarSensor, sensorSONAR)
 
-#define NO_BINS 72
+#define NO_BINS 180
 #define BOX_THRESHOLD 35
 
 #define TURN_SPEED 20
 #define FORWARD_SPEED 25
 #define TURN_CONST 12012
+#define SONAR_TURN_CONST 4.1
+#define SONAR_TURN_EXTRA 1.6
 #define FORWARD_CONST 1980
 #define PI 3.14159265358979
 #define DESIRED_WALL_DIST 21
-#define WALL_FOLLOW_K 0.75
+#define WALL_FOLLOW_K 0.3
 #define SENSOR_MAX 100
 
 /*
@@ -40,9 +44,24 @@ void setMotorSpeeds(int lspeed, int rspeed)
 void rotateSonar(float angle)
 {
     int i = (angle < 0) ? -1 : 1;
+    //int c = (angle < 0) ? -5 : 0;
     motor[motorA] = i*25;
-    wait1Msec(i*angle*4);
+    wait1Msec(i*angle*SONAR_TURN_CONST);
     motor[motorA] = 0;
+}
+
+/*
+ * +ve angles are anticlockwise, angle in degrees
+ */
+void Turn(float a)
+{
+  int i = (a < 0) ? -1 : 1;
+  setMotorSpeeds(-i*TURN_SPEED, i*TURN_SPEED);
+  writeDebugStreamLine("TURN: %f", a);
+
+  // Correction for motor bias
+  wait1Msec(i*degToRad(a)*(float)TURN_CONST/(float)TURN_SPEED);
+  setMotorSpeeds(0, 0);
 }
 
 void Forward(float distance)
@@ -79,35 +98,28 @@ void ForwardWallFollow(bool sonarFacingLeft)
     	count = 0;
     	prevSensorDist = sensorDist;
     }
-    if (count > 3) // && abs(var) < 10)
+    if (count > 7) // && abs(var) < 10)
     	break; // Almost definately found gap
 
 
     var = WALL_FOLLOW_K*(sensorDist - DESIRED_WALL_DIST);
-    //if (sonarFacingLeft)
+    if (sonarFacingLeft)
       setMotorSpeeds(FORWARD_SPEED-var, FORWARD_SPEED+var);
-    //else
-    	//setMotorSpeeds(FORWARD_SPEED+var, FORWARD_SPEED-var);
+    else
+    	setMotorSpeeds(FORWARD_SPEED+var, FORWARD_SPEED-var);
     writeDebugStreamLine("MOTORS: %d %f", var, sensorDist);
     //wait1Msec(1);
+
+    if (SensorValue[touchSensorL] != 0)
+    	Turn(-45);
+    else if (SensorValue[touchSensorR] != 0)
+    	Turn(45);
   }
   setMotorSpeeds(0, 0);
   PlayImmediateTone(500, 30);
 }
 
-/*
- * +ve angles are anticlockwise, angle in degrees
- */
-void Turn(float a)
-{
-  int i = (a < 0) ? -1 : 1;
-  setMotorSpeeds(-i*TURN_SPEED, i*TURN_SPEED);
-  writeDebugStreamLine("TURN: %f", a);
 
-  // Correction for motor bias
-  wait1Msec(i*degToRad(a)*(float)TURN_CONST/(float)TURN_SPEED);
-  setMotorSpeeds(0, 0);
-}
 
 /*---------------------------------------*/
 
@@ -118,7 +130,7 @@ void moveOutOfStartBlock()
   int endIdx = -1;
 	int dists[NO_BINS];
 	//Determine angle to turn
-	float ang = 360/NO_BINS+2.90;
+	float ang = 360/NO_BINS+SONAR_TURN_EXTRA;
 	// Spin sonar and take readings
   for (i=0; i < NO_BINS; i++)
   {
@@ -140,6 +152,7 @@ void moveOutOfStartBlock()
   	endIdx = NO_BINS;
 
   // Unspin sonar back to start position
+  wait1Msec(500);
   rotateSonar(-360);
 
   //writeDebugStreamLine("S: %d E: %d", startIdx, endIdx);
@@ -148,6 +161,8 @@ void moveOutOfStartBlock()
   float angleToTurn = idx*360/NO_BINS;
   writeDebugStreamLine("ANGLE: %f", angleToTurn);
   // Ensure we turn smallest distance possible
+  angleToTurn -= 20;
+
   if (angleToTurn > 180)
   	angleToTurn = angleToTurn-360;
 
@@ -161,15 +176,17 @@ int determineStartPosition()
 	int leftDist, rightDist;
 	rotateSonar(90);
 	leftDist = SensorValue[sonarSensor];
+	wait1Msec(500);
 	rotateSonar(-180);
 	rightDist = SensorValue[sonarSensor];
+	wait1Msec(500);
 	rotateSonar(90);
 
 	if (leftDist > 100 && rightDist < 100) return 1;
 	if (leftDist > 100 && rightDist > 100) return 2;
 	if (leftDist < 100 && rightDist > 100) return 3;
 
-  return -1;
+  return 1;
 }
 
 void executePlan1()
@@ -271,10 +288,11 @@ void executePlan3()
 
 task main()
 {
+	//ForwardWallFollow(true);
+	//return;
   moveOutOfStartBlock();
   int startPos = determineStartPosition();
   writeDebugStreamLine("START POS: %d", startPos);
-  if (startPos == -1) return;
 
   switch (startPos)
   {
