@@ -9,11 +9,12 @@
 #define FORWARD_SPEED 25
 #define TURN_CONST 12012
 #define SONAR_TURN_CONST 4.1
-#define SONAR_TURN_EXTRA 0.94
+#define SONAR_TURN_EXTRA 0.92
 #define FORWARD_CONST 2300//1980
 #define PI 3.14159265358979
-#define DESIRED_WALL_DIST 21
-#define WALL_FOLLOW_K 0.3
+#define DESIRED_WALL_DIST 25
+#define WALL_FOLLOW_K 0.4
+#define WALL_FOLLOW_DIST 190
 #define SENSOR_MAX 100
 
 /*
@@ -87,15 +88,14 @@ void ForwardWallFollow(bool sonarFacingLeft)
   float prevSensorDist = -1;
   int count = 0;
   int lspeed, rspeed;
-  float sonarAngle = 0.0;
   //int timeLeft = (int) (distance*FORWARD_CONST/(float)FORWARD_SPEED);
   while (true)
   {
   	sensorDist = SensorValue[sonarSensor];
-  	if (sensorDist > SENSOR_MAX) continue; // Ignore error readings
+  	if (sensorDist > SENSOR_MAX || sensorDist < 10 ) continue; // Ignore error readings
 
   	// If difference between current and previous sensor reading is large, we have found a gap
-  	if (abs(prevSensorDist - sensorDist) > 15 && prevSensorDist != -1)
+  	if (abs(prevSensorDist - sensorDist) > 25 && prevSensorDist != -1 && sensorDist > 35)
   		count++; // Possibly found gap
     else {
     	count = 0;
@@ -104,26 +104,28 @@ void ForwardWallFollow(bool sonarFacingLeft)
     if (count > 7) // && abs(var) < 10)
     	break; // Almost definately found gap
 
-    float sonarDiff = sensorDist - DESIRED_WALL_DIST;
-    var = WALL_FOLLOW_K*sonarDiff;
+    //float sonarDiff = sensorDist - DESIRED_WALL_DIST;
+    var = WALL_FOLLOW_K*(sensorDist - DESIRED_WALL_DIST);
+    if (var > 1) var = 1;
+    else if (var < -1) var = -1;
     if (sonarFacingLeft) {
-    	if (abs(sonarDiff) > 5) {
-    		sonarAngle -= var*0.1;
-    	  //rotateSonar(-var*0.1);
-    	}
+    	//if (abs(sonarDiff) > 5) {
+    		//sonarAngle -= var*0.1;
+    	  //rotateSonar(-var*0.05);
+    	//}
       lspeed = FORWARD_SPEED-var;
       rspeed = FORWARD_SPEED+var;
     }
     else if (!sonarFacingLeft) {
-    	if (abs(sonarDiff) > 5) {
-    		sonarAngle += var*0.1;
-    	  //rotateSonar(var*0.1);
-    	}
+    	//if (abs(sonarDiff) > 5) {
+    		//sonarAngle += var*0.1;
+    	  //rotateSonar(var*0.05);
+    	//}
       lspeed = FORWARD_SPEED+var;
       rspeed = FORWARD_SPEED-var;
     }
-    setMotorSpeeds(lspeed, rspeed);
-    writeDebugStreamLine("MOTORS: %d %f", var, sensorDist);
+    setMotorSpeeds(2*lspeed, 2*rspeed);
+    //writeDebugStreamLine("MOTORS: %d %f", var, sensorDist);
     //wait1Msec(1);
   }
   setMotorSpeeds(0, 0);
@@ -147,9 +149,9 @@ void moveOutOfStartBlock()
     rotateSonar(ang);
     // Save dist in loc_sig instance ls
     dists[i] = SensorValue[sonarSensor];
-    //writeDebugStreamLine("DIST: %d %d", i, dists[i]);
+    writeDebugStreamLine("DIST: %d %d", i, dists[i]);
 
-    if (dists[i] > BOX_THRESHOLD && dists[i] < SENSOR_MAX && startIdx == -1)
+    if (dists[i] > BOX_THRESHOLD && startIdx == -1)
   	{
   		startIdx = i;
     }
@@ -180,7 +182,7 @@ void moveOutOfStartBlock()
   	angleToTurn -= 10;
 
   Turn(angleToTurn);
-  Forward(40);
+  Forward(35);
 }
 
 
@@ -206,7 +208,7 @@ void executePlan1()
 {
   Turn(90);
   rotateSonar(70);
-  Forward(40);
+  Forward(25);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
@@ -247,7 +249,7 @@ void executePlan2()
   Forward(-40);
   Turn(-90);
   Forward(40);
-  rotateSonar(180);
+  rotateSonar(140);
   // Skip past middle gap
   ForwardWallFollow(true);
   Forward(50);
@@ -301,8 +303,9 @@ void executePlan3()
 
 task main()
 {
-	//ForwardWallFollow(true);
-	//return;
+	ForwardWallFollow(true);
+	wait10Msec(100);
+	return;
 writeDebugStreamLine("---------------------------------------");
   moveOutOfStartBlock();
   int startPos = determineStartPosition();
