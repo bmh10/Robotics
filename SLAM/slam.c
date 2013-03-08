@@ -73,6 +73,17 @@ void Turn(float a)
   setMotorSpeeds(0, 0);
 }
 
+void ForwardDoubleSpeed(float distance)
+{
+	int i = (distance < 0) ? -1 : 1;
+	setMotorSpeeds(i*2*FORWARD_SPEED, i*2*FORWARD_SPEED);
+	writeDebugStreamLine("FORWARD: %f", distance);
+
+  int timeLeft = (int) (i*distance*FORWARD_CONST/(float)FORWARD_SPEED);
+  wait1Msec(timeLeft);
+  setMotorSpeeds(0, 0);
+}
+
 void Forward(float distance)
 {
 	int i = (distance < 0) ? -1 : 1;
@@ -94,13 +105,23 @@ void ForwardWallFollow(bool sonarFacingLeft)
   int var;
   float sensorDist;
   float prevSensorDist = -1;
-  int count = 0;
+  int count = 0;//, errorCount = 0;
   int lspeed, rspeed;
   //int timeLeft = (int) (distance*FORWARD_CONST/(float)FORWARD_SPEED);
   while (true)
   {
   	sensorDist = SensorValue[sonarSensor];
-  	if (sensorDist > SENSOR_MAX || sensorDist < 10 ) continue; // Ignore error readings
+  	if (sensorDist > SENSOR_MAX || sensorDist < 10 ) {
+  		//errorCount++;
+  		// If robot cannot get a reading for a period of time roate sonar gradually
+  		//if (errorCount > 50) {
+  		  //if (sonarFacingLeft) rotateSonar(1);
+  		  //else rotateSonar(-1);
+  		  //prevSensorDist = sensorDist;
+  	  //}
+  	  continue; // Ignore error readings
+    }
+    //errorCount = 0;
 
   	// If difference between current and previous sensor reading is large, we have found a gap
   	if (abs(prevSensorDist - sensorDist) > 25 && prevSensorDist != -1 && sensorDist > 35) {
@@ -193,7 +214,7 @@ void moveOutOfStartBlock()
   	//angleToTurn -= 10;
 
   Turn(angleToTurn);
-  Forward(35);
+  Forward(39);
 }
 
 
@@ -236,10 +257,10 @@ void executePlan1()
   Forward(-40);
   Turn(90);
   Forward(40);
-  rotateSonar(-120);
+  rotateSonar(-140);
   //Skip past middle gap
   ForwardWallFollow(false);
-  Forward(50);
+  ForwardDoubleSpeed(30);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -251,7 +272,7 @@ void executePlan2()
 {
 	Turn(-90);
   rotateSonar(-70);
-  Forward(40);
+  Forward(25);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -260,10 +281,10 @@ void executePlan2()
   Forward(-40);
   Turn(-90);
   Forward(40);
-  rotateSonar(140);
+  rotateSonar(130);
   // Skip past middle gap
   ForwardWallFollow(true);
-  Forward(50);
+  ForwardDoubleSpeed(30);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
@@ -272,7 +293,7 @@ void executePlan2()
   Forward(-40);
   Turn(90);
   Forward(40);
-  rotateSonar(-140);
+  rotateSonar(-130);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -283,8 +304,8 @@ void executePlan2()
 void executePlan3()
 {
 	Turn(-90);
-  rotateSonar(-70);
-  Forward(40);
+  rotateSonar(-50);
+  Forward(25);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -301,10 +322,10 @@ void executePlan3()
   Forward(-40);
   Turn(-90);
   Forward(40);
-  rotateSonar(140);
+  rotateSonar(130);
   //Skip past middle gap
   ForwardWallFollow(true);
-  Forward(50);
+  ForwardDoubleSpeed(30);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
@@ -314,9 +335,9 @@ void executePlan3()
 
 task main()
 {
-	ForwardWallFollow(false);
-	wait10Msec(100);
-	return;
+	//ForwardWallFollow(false);
+	//wait10Msec(100);
+	//return;
 writeDebugStreamLine("---------------------------------------");
   moveOutOfStartBlock();
   int startPos = determineStartPosition();
