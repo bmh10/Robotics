@@ -13,7 +13,7 @@
 #define FORWARD_CONST 2300//1980
 #define PI 3.14159265358979
 #define DESIRED_WALL_DIST 25
-#define WALL_FOLLOW_K 0.4
+#define WALL_FOLLOW_K 0.6
 #define WALL_FOLLOW_DIST 190
 #define SENSOR_MAX 100
 
@@ -23,6 +23,14 @@
 float radToDeg(float a)
 {
 	return a*(180/PI);
+}
+
+void playTone(int n)
+{
+	for (int i=0; i < n; i++) {
+    PlayImmediateTone(500, 30);
+    wait1Msec(500);
+  }
 }
 
 float degToRad(float a)
@@ -95,8 +103,10 @@ void ForwardWallFollow(bool sonarFacingLeft)
   	if (sensorDist > SENSOR_MAX || sensorDist < 10 ) continue; // Ignore error readings
 
   	// If difference between current and previous sensor reading is large, we have found a gap
-  	if (abs(prevSensorDist - sensorDist) > 25 && prevSensorDist != -1 && sensorDist > 35)
+  	if (abs(prevSensorDist - sensorDist) > 25 && prevSensorDist != -1 && sensorDist > 35) {
   		count++; // Possibly found gap
+  		writeDebugStreamLine("BREAK: %f %f", sensorDist, prevSensorDist);
+  	}
     else {
     	count = 0;
     	prevSensorDist = sensorDist;
@@ -105,7 +115,8 @@ void ForwardWallFollow(bool sonarFacingLeft)
     	break; // Almost definately found gap
 
     //float sonarDiff = sensorDist - DESIRED_WALL_DIST;
-    var = WALL_FOLLOW_K*(sensorDist - DESIRED_WALL_DIST);
+    var = (sonarFacingLeft) ? WALL_FOLLOW_K*(sensorDist - DESIRED_WALL_DIST)
+                            : WALL_FOLLOW_K*(sensorDist - (DESIRED_WALL_DIST));
     if (var > 1) var = 1;
     else if (var < -1) var = -1;
     if (sonarFacingLeft) {
@@ -173,13 +184,13 @@ void moveOutOfStartBlock()
   float angleToTurn = idx*360/NO_BINS;
   writeDebugStreamLine("ANGLE: %f", angleToTurn);
   // Ensure we turn smallest distance possible
-  angleToTurn -= 20;
+  //angleToTurn -= 20;
 
   if (angleToTurn > 180)
   	angleToTurn = angleToTurn-360;
 
-  if (angleToTurn < 0)
-  	angleToTurn -= 10;
+  //if (angleToTurn < 0)
+  	//angleToTurn -= 10;
 
   Turn(angleToTurn);
   Forward(35);
@@ -207,7 +218,7 @@ int determineStartPosition()
 void executePlan1()
 {
   Turn(90);
-  rotateSonar(70);
+  rotateSonar(50);
   Forward(25);
   ForwardWallFollow(true);
   Forward(25);
@@ -225,7 +236,7 @@ void executePlan1()
   Forward(-40);
   Turn(90);
   Forward(40);
-  rotateSonar(-140);
+  rotateSonar(-120);
   //Skip past middle gap
   ForwardWallFollow(false);
   Forward(50);
@@ -303,7 +314,7 @@ void executePlan3()
 
 task main()
 {
-	ForwardWallFollow(true);
+	ForwardWallFollow(false);
 	wait10Msec(100);
 	return;
 writeDebugStreamLine("---------------------------------------");
