@@ -143,13 +143,13 @@ void ForwardWallFollow(bool sonarFacingLeft)
   float sensorDist;
   float prevSensorDist = -1;
   int count = 0;//, errorCount = 0;
-  int thereYet = 0;
+  //int thereYet = 0;
   int lspeed, rspeed;
   //int timeLeft = (int) (distance*FORWARD_CONST/(float)FORWARD_SPEED);
   while (true)
   {
-  	thereYet++;
-  	writeDebugStreamLine("T %d", thereYet);
+  	//thereYet++;
+  	//writeDebugStreamLine("T %d", thereYet);
   	sensorDist = SensorValue[sonarSensor];
   	if (sensorDist > SENSOR_MAX || sensorDist < 5 ) {
   		//errorCount++;
@@ -160,8 +160,10 @@ void ForwardWallFollow(bool sonarFacingLeft)
   		  //else rotateSonar(-1);
   		  //prevSensorDist = sensorDist;
   	  //}
+  	writeDebugStreamLine("ERROR");
   	  setMotorSpeeds(2*FORWARD_SPEED, 2*FORWARD_SPEED);
   	  avoidWalls();
+
   	  continue; // Ignore error readings
     }
     //errorCount = 0;
@@ -209,6 +211,28 @@ void ForwardWallFollow(bool sonarFacingLeft)
   PlayImmediateTone(500, 30);
 }
 
+int getPrevDist(int *dists, int idx) {
+  int ret = 255;
+  while (ret == 255) {
+  	idx--;
+  	if (idx < 0) idx = NO_BINS-1;
+    ret = dists[idx];
+  }
+  return ret;
+}
+
+//Including self
+int getNextDist(int *dists, int idx) {
+  int ret = 255;
+  while (ret == 255) {
+  	if (idx > NO_BINS-1) idx = 0;
+    ret = dists[idx];
+    idx++;
+  }
+  return ret;
+
+}
+
 /*---------------------------------------*/
 
 void moveOutOfStartBlock()
@@ -217,30 +241,49 @@ void moveOutOfStartBlock()
 	int startIdx = -1;
   int endIdx = -1;
 	int dists[NO_BINS];
-	bool modResult = false;
+	bool startFacingWall = false;
 	//Determine angle to turn
 	float ang = (float) (360/NO_BINS)+SONAR_TURN_EXTRA;
-	dists[0] = SensorValue[sonarSensor];
-	modResult = (dists[0] > BOX_THRESHOLD);
+
 	// Spin sonar and take readings
-  for (i=1; i < NO_BINS; i++)
+  for (i=0; i < NO_BINS; i++)
   {
     rotateSonar(ang);
     // Save dist in loc_sig instance ls
     dists[i] = SensorValue[sonarSensor];
+    if (dists[i] == 255) dists[i] = 0;
     writeDebugStreamLine("DIST: %d %d", i, dists[i]);
+  }
 
-    if (startIdx == -1 && dists[i] < SENSOR_MAX &&
-    	  ((dists[i-1] > BOX_THRESHOLD && dists[i] < BOX_THRESHOLD) ||
-    	  (dists[i-1] < BOX_THRESHOLD && dists[i] > BOX_THRESHOLD)))
-  	{
-  		startIdx = i;
+	startFacingWall = (dists[0] > BOX_THRESHOLD);
+
+	// Get endIdx first in this case
+	if (startFacingWall) {
+		for (i=1; i < NO_BINS; i++) {
+	   if (startIdx == -1 &&
+    	  dists[i-1] > BOX_THRESHOLD && dists[i] < BOX_THRESHOLD)
+  	  {
+  		  startIdx = i;
+      }
+      else if (startIdx != -1 && endIdx == -1 &&
+    	         dists[i-1] < BOX_THRESHOLD && dists[i] > BOX_THRESHOLD)
+      {
+  		  endIdx = i;
+      }
     }
-    else if (startIdx != -1 && endIdx == -1 && dists[i] < SENSOR_MAX &&
-    	      ((dists[i-1] > BOX_THRESHOLD && dists[i] < BOX_THRESHOLD) ||
-    	      (dists[i-1] < BOX_THRESHOLD && dists[i] > BOX_THRESHOLD)))
-    {
-  		endIdx = i;
+  }
+  else {
+  	for (i=1; i < NO_BINS; i++) {
+	   if (startIdx == -1 &&
+    	  dists[i-1] < BOX_THRESHOLD && dists[i] > BOX_THRESHOLD)
+  	  {
+  		  startIdx = i;
+      }
+      else if (startIdx != -1 && endIdx == -1 &&
+    	      dists[i-1] > BOX_THRESHOLD && dists[i] < BOX_THRESHOLD)
+      {
+  		  endIdx = i;
+      }
     }
   }
   if (startIdx == -1)
@@ -252,9 +295,9 @@ void moveOutOfStartBlock()
   wait1Msec(500);
   rotateSonar(-360);
 
-  writeDebugStreamLine("S: %d E: %d M: %d", startIdx, endIdx, modResult);
+  writeDebugStreamLine("S: %d E: %d F: %d", startIdx, endIdx, startFacingWall);
 
-  int idx = (modResult) ? ((startIdx+endIdx)-180)/2 : (startIdx+endIdx)/2;
+  int idx = (startFacingWall) ? ((startIdx+endIdx)-180)/2 : (startIdx+endIdx)/2;
   float angleToTurn = idx*360/NO_BINS;
   writeDebugStreamLine("ANGLE: %f", angleToTurn);
   // Ensure we turn smallest distance possible
@@ -299,11 +342,11 @@ int determineStartPosition()
 void executePlan1()
 {
 	//Correct angle
-  Turn(80);
+  Turn(90);
   rotateSonar(SONAR_ANGLE);
   ForwardDoubleSpeed(25);
   ForwardWallFollow(true);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(90);
   rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
@@ -313,7 +356,7 @@ void executePlan1()
   rotateSonar(SONAR_ANGLE);
   ForwardDoubleSpeed(40);
   ForwardWallFollow(true);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(90);
   rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
@@ -326,7 +369,7 @@ void executePlan1()
   ForwardWallFollow(false);
   ForwardDoubleSpeed(30);
   ForwardWallFollow(false);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(-90);
   rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
@@ -340,7 +383,7 @@ void executePlan2()
   rotateSonar(-SONAR_ANGLE);
   ForwardDoubleSpeed(25);
   ForwardWallFollow(false);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(-90);
   rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
@@ -353,7 +396,7 @@ void executePlan2()
   ForwardWallFollow(true);
   ForwardDoubleSpeed(30);
   ForwardWallFollow(true);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(90);
   rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
@@ -363,7 +406,7 @@ void executePlan2()
   rotateSonar(-SONAR_ANGLE);
   ForwardDoubleSpeed(40);
   ForwardWallFollow(false);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(-90);
   rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
@@ -377,7 +420,7 @@ void executePlan3()
   rotateSonar(-SONAR_ANGLE);
   ForwardDoubleSpeed(25);
   ForwardWallFollow(false);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(-90);
   rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
@@ -387,7 +430,7 @@ void executePlan3()
   rotateSonar(-SONAR_ANGLE);
   ForwardDoubleSpeed(40);
   ForwardWallFollow(false);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(-90);
   rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
@@ -400,7 +443,7 @@ void executePlan3()
   ForwardWallFollow(true);
   ForwardDoubleSpeed(30);
   ForwardWallFollow(true);
-  Forward(25);
+  ForwardDoubleSpeed(14);
   Turn(90);
   rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
