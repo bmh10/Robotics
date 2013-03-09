@@ -230,7 +230,8 @@ void moveOutOfStartBlock()
 
   // If facing a wall which is close to us must have
   // got angle calculation wrong so try again.
-  if (SensorValue[sonarSensor] < 25)
+  int d = SensorValue[sonarSensor];
+  if (d < 25 || d > SENSOR_MAX)
   	moveOutOfStartBlock();
 
   Forward(39);
