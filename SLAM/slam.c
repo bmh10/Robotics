@@ -3,7 +3,7 @@
 #pragma config(Sensor, S4, sonarSensor, sensorSONAR)
 
 #define NO_BINS 180
-#define BOX_THRESHOLD 35
+#define BOX_THRESHOLD 42
 
 #define TURN_SPEED 20
 #define FORWARD_SPEED 25
@@ -187,25 +187,34 @@ void moveOutOfStartBlock()
 	int startIdx = -1;
   int endIdx = -1;
 	int dists[NO_BINS];
+	bool modResult = false;
 	//Determine angle to turn
 	float ang = (float) (360/NO_BINS)+SONAR_TURN_EXTRA;
+	dists[0] = SensorValue[sonarSensor];
+	modResult = (dists[0] > BOX_THRESHOLD);
 	// Spin sonar and take readings
-  for (i=0; i < NO_BINS; i++)
+  for (i=1; i < NO_BINS; i++)
   {
     rotateSonar(ang);
     // Save dist in loc_sig instance ls
     dists[i] = SensorValue[sonarSensor];
     writeDebugStreamLine("DIST: %d %d", i, dists[i]);
 
-    if (dists[i] > BOX_THRESHOLD && startIdx == -1)
+    if (startIdx == -1 && dists[i] < SENSOR_MAX &&
+    	  ((dists[i-1] > BOX_THRESHOLD && dists[i] < BOX_THRESHOLD) ||
+    	  (dists[i-1] < BOX_THRESHOLD && dists[i] > BOX_THRESHOLD)))
   	{
   		startIdx = i;
     }
-    else if (startIdx != -1 && endIdx == -1 && dists[i] < BOX_THRESHOLD)
+    else if (startIdx != -1 && endIdx == -1 && dists[i] < SENSOR_MAX &&
+    	      ((dists[i-1] > BOX_THRESHOLD && dists[i] < BOX_THRESHOLD) ||
+    	      (dists[i-1] < BOX_THRESHOLD && dists[i] > BOX_THRESHOLD)))
     {
   		endIdx = i;
     }
   }
+  if (startIdx == -1)
+  	startIdx = 0;
   if (endIdx == -1)
   	endIdx = NO_BINS;
 
@@ -213,9 +222,9 @@ void moveOutOfStartBlock()
   wait1Msec(500);
   rotateSonar(-360);
 
-  //writeDebugStreamLine("S: %d E: %d", startIdx, endIdx);
+  writeDebugStreamLine("S: %d E: %d M: %d", startIdx, endIdx, modResult);
 
-  int idx = (startIdx+endIdx)/2;
+  int idx = (modResult) ? ((startIdx+endIdx)-180)/2 : (startIdx+endIdx)/2;
   float angleToTurn = idx*360/NO_BINS;
   writeDebugStreamLine("ANGLE: %f", angleToTurn);
   // Ensure we turn smallest distance possible
@@ -232,7 +241,7 @@ void moveOutOfStartBlock()
   // If facing a wall which is close to us must have
   // got angle calculation wrong so try again.
   int d = SensorValue[sonarSensor];
-  if (d < 25 || d > SENSOR_MAX)
+  if (d < 35 || d > SENSOR_MAX)
   	moveOutOfStartBlock();
 
   Forward(35);
