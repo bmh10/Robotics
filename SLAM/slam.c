@@ -7,7 +7,7 @@
 
 #define TURN_SPEED 20
 #define FORWARD_SPEED 25
-#define TURN_CONST 12490//12012
+#define TURN_CONST 12012 //12490
 #define SONAR_TURN_CONST 4.1
 #define SONAR_TURN_EXTRA 0.92
 #define FORWARD_CONST 2300//1980
@@ -17,6 +17,7 @@
 #define WALL_FOLLOW_K 0.6
 #define WALL_FOLLOW_DIST 190
 #define SENSOR_MAX 100
+#define SONAR_ANGLE 60
 
 /*
  * Converts radians to degrees
@@ -234,7 +235,7 @@ void moveOutOfStartBlock()
   if (d < 25 || d > SENSOR_MAX)
   	moveOutOfStartBlock();
 
-  Forward(39);
+  Forward(35);
 }
 
 
@@ -260,35 +261,35 @@ void executePlan1()
 {
 	//Correct angle
   Turn(80);
-  rotateSonar(60);
+  rotateSonar(SONAR_ANGLE);
   Forward(25);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
-  rotateSonar(-60);
+  rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 2
   Forward(-40);
   Turn(-90);
   Forward(40);
-  rotateSonar(60);
+  rotateSonar(SONAR_ANGLE);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
-  rotateSonar(-60);
+  rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 3
   Forward(-40);
   Turn(90);
   Forward(40);
-  rotateSonar(-60);
+  rotateSonar(-SONAR_ANGLE);
   //Skip past middle gap
   ForwardWallFollow(false);
   ForwardDoubleSpeed(30);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
-  rotateSonar(60);
+  rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 1
 }
@@ -296,36 +297,36 @@ void executePlan1()
 void executePlan2()
 {
 	// Correct angle
-	Turn(-100);
-  rotateSonar(-70);
+	Turn(-90);
+  rotateSonar(-SONAR_ANGLE);
   Forward(25);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
-  rotateSonar(70);
+  rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 1
   Forward(-40);
   Turn(-90);
   Forward(40);
-  rotateSonar(70);
+  rotateSonar(SONAR_ANGLE);
   // Skip past middle gap
   ForwardWallFollow(true);
   ForwardDoubleSpeed(30);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
-  rotateSonar(-70);
+  rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 3
   Forward(-40);
   Turn(90);
   Forward(40);
-  rotateSonar(-70);
+  rotateSonar(-SONAR_ANGLE);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
-  rotateSonar(70);
+  rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 2
 }
@@ -333,36 +334,36 @@ void executePlan2()
 void executePlan3()
 {
 	// Correct angle
-	Turn(-100);
-  rotateSonar(-70);
+	Turn(-90);
+  rotateSonar(-SONAR_ANGLE);
   Forward(25);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
-  rotateSonar(70);
+  rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 2
   Forward(-40);
   Turn(90);
   Forward(40);
-  rotateSonar(-70);
+  rotateSonar(-SONAR_ANGLE);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
-  rotateSonar(70);
+  rotateSonar(SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 1
   Forward(-40);
   Turn(-90);
   Forward(40);
-  rotateSonar(70);
+  rotateSonar(SONAR_ANGLE);
   //Skip past middle gap
   ForwardWallFollow(true);
   ForwardDoubleSpeed(30);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
-  rotateSonar(-70);
+  rotateSonar(-SONAR_ANGLE);
   MoveToWaypoint();
   AtWaypoint(); // Waypoint 3
 }
