@@ -1,9 +1,10 @@
-#pragma config(Sensor, S1, touchSensorL, sensorTouch)
-#pragma config(Sensor, S2, touchSensorR, sensorTouch)
+#pragma config(Sensor, S1, lightSensorR, sensorLightActive)
+#pragma config(Sensor, S2, lightSensorL, sensorLightActive)
 #pragma config(Sensor, S4, sonarSensor, sensorSONAR)
 
 #define NO_BINS 180
 #define BOX_THRESHOLD 42
+#define APPROX_WALL_FOLLW_DIST 17200
 
 #define TURN_SPEED 20
 #define FORWARD_SPEED 25
@@ -18,6 +19,9 @@
 #define WALL_FOLLOW_DIST 190
 #define SENSOR_MAX 100
 #define SONAR_ANGLE 60
+#define LIGHT_THRESHOLD 27
+
+void ForwardDoubleSpeed(float distance);
 
 /*
  * Converts radians to degrees
@@ -75,6 +79,23 @@ void Turn(float a)
   setMotorSpeeds(0, 0);
 }
 
+
+void avoidWalls() {
+    int lightL = SensorValue[lightSensorL];
+    int lightR = SensorValue[lightSensorR];
+    //writeDebugStreamLine("LIGHTS: %d %d", lightL, lightR);
+    if (lightL > LIGHT_THRESHOLD) {
+      setMotorSpeeds(0, 0);
+      Turn(-20);
+      ForwardDoubleSpeed(10);
+    }
+    else if (lightR > LIGHT_THRESHOLD) {
+      setMotorSpeeds(0, 0);
+      Turn(20);
+      ForwardDoubleSpeed(10);
+    }
+}
+
 void ForwardDoubleSpeed(float distance)
 {
 	int i = (distance < 0) ? -1 : 1;
@@ -82,7 +103,10 @@ void ForwardDoubleSpeed(float distance)
 	writeDebugStreamLine("FORWARD: %f", distance);
 
   int timeLeft = (int) (i*distance*FORWARD_CONST/(float)FORWARD_SPEED);
-  wait1Msec(timeLeft);
+  for ( ; timeLeft > 0; timeLeft--) {
+  	avoidWalls();
+    wait1Msec(1);
+  }
   setMotorSpeeds(0, 0);
 }
 
@@ -119,10 +143,13 @@ void ForwardWallFollow(bool sonarFacingLeft)
   float sensorDist;
   float prevSensorDist = -1;
   int count = 0;//, errorCount = 0;
+  int thereYet = 0;
   int lspeed, rspeed;
   //int timeLeft = (int) (distance*FORWARD_CONST/(float)FORWARD_SPEED);
   while (true)
   {
+  	thereYet++;
+  	writeDebugStreamLine("T %d", thereYet);
   	sensorDist = SensorValue[sonarSensor];
   	if (sensorDist > SENSOR_MAX || sensorDist < 5 ) {
   		//errorCount++;
@@ -133,6 +160,8 @@ void ForwardWallFollow(bool sonarFacingLeft)
   		  //else rotateSonar(-1);
   		  //prevSensorDist = sensorDist;
   	  //}
+  	  setMotorSpeeds(2*FORWARD_SPEED, 2*FORWARD_SPEED);
+  	  avoidWalls();
   	  continue; // Ignore error readings
     }
     //errorCount = 0;
@@ -146,7 +175,7 @@ void ForwardWallFollow(bool sonarFacingLeft)
     	count = 0;
     	prevSensorDist = sensorDist;
     }
-    if (count > 20) // && abs(var) < 10)
+    if (count > 30) // && abs(var) < 10)
     	break; // Almost definately found gap
 
     //float sonarDiff = sensorDist - DESIRED_WALL_DIST;
@@ -171,7 +200,8 @@ void ForwardWallFollow(bool sonarFacingLeft)
       rspeed = FORWARD_SPEED-var;
     }
     setMotorSpeeds(2*lspeed, 2*rspeed);
-    //writeDebugStreamLine("MOTORS: %d %f", var, sensorDist);
+
+    avoidWalls();
     //wait1Msec(1);
   }
   setMotorSpeeds(0, 0);
@@ -241,10 +271,10 @@ void moveOutOfStartBlock()
   // If facing a wall which is close to us must have
   // got angle calculation wrong so try again.
   int d = SensorValue[sonarSensor];
-  if (d < 35 || d > SENSOR_MAX)
-  	moveOutOfStartBlock();
-
-  Forward(35);
+  if (d < 35 || d > SENSOR_MAX) {
+  	wait1Msec(500);
+    moveOutOfStartBlock();
+  }
 }
 
 
@@ -271,7 +301,7 @@ void executePlan1()
 	//Correct angle
   Turn(80);
   rotateSonar(SONAR_ANGLE);
-  Forward(25);
+  ForwardDoubleSpeed(25);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
@@ -280,8 +310,8 @@ void executePlan1()
   AtWaypoint(); // Waypoint 2
   Forward(-40);
   Turn(-90);
-  Forward(40);
   rotateSonar(SONAR_ANGLE);
+  ForwardDoubleSpeed(40);
   ForwardWallFollow(true);
   Forward(25);
   Turn(90);
@@ -290,8 +320,8 @@ void executePlan1()
   AtWaypoint(); // Waypoint 3
   Forward(-40);
   Turn(90);
-  Forward(40);
   rotateSonar(-SONAR_ANGLE);
+  ForwardDoubleSpeed(40);
   //Skip past middle gap
   ForwardWallFollow(false);
   ForwardDoubleSpeed(30);
@@ -308,7 +338,7 @@ void executePlan2()
 	// Correct angle
 	Turn(-90);
   rotateSonar(-SONAR_ANGLE);
-  Forward(25);
+  ForwardDoubleSpeed(25);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -317,8 +347,8 @@ void executePlan2()
   AtWaypoint(); // Waypoint 1
   Forward(-40);
   Turn(-90);
-  Forward(40);
   rotateSonar(SONAR_ANGLE);
+  ForwardDoubleSpeed(40);
   // Skip past middle gap
   ForwardWallFollow(true);
   ForwardDoubleSpeed(30);
@@ -330,8 +360,8 @@ void executePlan2()
   AtWaypoint(); // Waypoint 3
   Forward(-40);
   Turn(90);
-  Forward(40);
   rotateSonar(-SONAR_ANGLE);
+  ForwardDoubleSpeed(40);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -345,7 +375,7 @@ void executePlan3()
 	// Correct angle
 	Turn(-90);
   rotateSonar(-SONAR_ANGLE);
-  Forward(25);
+  ForwardDoubleSpeed(25);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -354,8 +384,8 @@ void executePlan3()
   AtWaypoint(); // Waypoint 2
   Forward(-40);
   Turn(90);
-  Forward(40);
   rotateSonar(-SONAR_ANGLE);
+  ForwardDoubleSpeed(40);
   ForwardWallFollow(false);
   Forward(25);
   Turn(-90);
@@ -364,8 +394,8 @@ void executePlan3()
   AtWaypoint(); // Waypoint 1
   Forward(-40);
   Turn(-90);
-  Forward(40);
   rotateSonar(SONAR_ANGLE);
+  ForwardDoubleSpeed(40);
   //Skip past middle gap
   ForwardWallFollow(true);
   ForwardDoubleSpeed(30);
@@ -377,15 +407,28 @@ void executePlan3()
   AtWaypoint(); // Waypoint 3
 }
 
+void init() {
+   nMotorPIDSpeedCtrl[motorC] = mtrSpeedReg;
+	nMotorPIDSpeedCtrl[motorB] = mtrSpeedReg;
+}
+
 task main()
 {
 	//MoveTowardsWall(DESIRED_FINISH_DIST);
 	//ForwardWallFollow(true);
 		//wait10Msec(100);
   //Turn(90);
+/*
+while (true) {
+    int lightL = SensorValue[lightSensorL];
+    int lightR = SensorValue[lightSensorR];
+    writeDebugStreamLine("LIGHTS: %d %d", lightL, lightR);
+}*/
 	//return;
 writeDebugStreamLine("---------------------------------------");
+  init();
   moveOutOfStartBlock();
+  Forward(35);
   int startPos = determineStartPosition();
   writeDebugStreamLine("START POS: %d", startPos);
 
