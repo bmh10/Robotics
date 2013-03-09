@@ -10,7 +10,7 @@
 #define FORWARD_SPEED 25
 #define TURN_CONST 12012 //12490
 #define SONAR_TURN_CONST 4.1
-#define SONAR_TURN_EXTRA 0.92
+#define SONAR_TURN_EXTRA 1.1// 0.92
 #define FORWARD_CONST 2300//1980
 #define PI 3.14159265358979
 #define DESIRED_WALL_DIST 26
@@ -22,6 +22,7 @@
 #define LIGHT_THRESHOLD 27
 
 void ForwardDoubleSpeed(float distance);
+void Forward(float distance);
 
 /*
  * Converts radians to degrees
@@ -80,19 +81,21 @@ void Turn(float a)
 }
 
 
-void avoidWalls() {
+void avoidWalls(bool fast) {
     int lightL = SensorValue[lightSensorL];
     int lightR = SensorValue[lightSensorR];
     //writeDebugStreamLine("LIGHTS: %d %d", lightL, lightR);
+    int d = (fast) ? 2 : 1;
+
     if (lightL > LIGHT_THRESHOLD) {
-      setMotorSpeeds(0, 0);
+    	setMotorSpeeds(0, 0);
       Turn(-20);
-      ForwardDoubleSpeed(10);
+      setMotorSpeeds(d*FORWARD_SPEED, d*FORWARD_SPEED);
     }
     else if (lightR > LIGHT_THRESHOLD) {
-      setMotorSpeeds(0, 0);
+    	setMotorSpeeds(0, 0);
       Turn(20);
-      ForwardDoubleSpeed(10);
+      setMotorSpeeds(d*FORWARD_SPEED, d*FORWARD_SPEED);
     }
 }
 
@@ -104,7 +107,7 @@ void ForwardDoubleSpeed(float distance)
 
   int timeLeft = (int) (i*distance*FORWARD_CONST/(float)FORWARD_SPEED);
   for ( ; timeLeft > 0; timeLeft--) {
-  	avoidWalls();
+  	avoidWalls(true);
     wait1Msec(1);
   }
   setMotorSpeeds(0, 0);
@@ -117,7 +120,10 @@ void Forward(float distance)
 	writeDebugStreamLine("FORWARD: %f", distance);
 
   int timeLeft = (int) (i*distance*FORWARD_CONST/(float)FORWARD_SPEED);
-  wait1Msec(timeLeft);
+  for ( ; timeLeft > 0; timeLeft--) {
+  	avoidWalls(false);
+    wait1Msec(1);
+  }
   setMotorSpeeds(0, 0);
 }
 
@@ -160,9 +166,9 @@ void ForwardWallFollow(bool sonarFacingLeft)
   		  //else rotateSonar(-1);
   		  //prevSensorDist = sensorDist;
   	  //}
-  	writeDebugStreamLine("ERROR");
+  	  writeDebugStreamLine("ERROR");
   	  setMotorSpeeds(2*FORWARD_SPEED, 2*FORWARD_SPEED);
-  	  avoidWalls();
+  	  avoidWalls(true);
 
   	  continue; // Ignore error readings
     }
@@ -203,7 +209,7 @@ void ForwardWallFollow(bool sonarFacingLeft)
     }
     setMotorSpeeds(2*lspeed, 2*rspeed);
 
-    avoidWalls();
+    avoidWalls(true);
     //wait1Msec(1);
   }
   setMotorSpeeds(0, 0);
@@ -327,7 +333,7 @@ int determineStartPosition()
 	rotateSonar(100);
 	leftDist = SensorValue[sonarSensor];
 	wait1Msec(500);
-	rotateSonar(-200);
+	rotateSonar(-220);
 	rightDist = SensorValue[sonarSensor];
 	wait1Msec(500);
 	rotateSonar(100);
