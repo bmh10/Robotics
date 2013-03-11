@@ -10,7 +10,7 @@
 #define FORWARD_SPEED 25
 #define TURN_CONST 12012 //12490
 #define SONAR_TURN_CONST 4.1
-#define SONAR_TURN_EXTRA 1.1// 0.92
+#define SONAR_TURN_EXTRA  0.92//1.1//0.92
 #define FORWARD_CONST 2300//1980
 #define PI 3.14159265358979
 #define DESIRED_WALL_DIST 26
@@ -18,7 +18,7 @@
 #define WALL_FOLLOW_K 0.6
 #define WALL_FOLLOW_DIST 190
 #define SENSOR_MAX 100
-#define SONAR_ANGLE 60
+#define SONAR_ANGLE 65
 #define LIGHT_THRESHOLD 27
 
 void ForwardDoubleSpeed(float distance);
@@ -30,14 +30,6 @@ void Forward(float distance);
 float radToDeg(float a)
 {
 	return a*(180/PI);
-}
-
-void playTone(int n)
-{
-	for (int i=0; i < n; i++) {
-    PlayImmediateTone(500, 30);
-    wait1Msec(500);
-  }
 }
 
 float degToRad(float a)
@@ -223,7 +215,7 @@ void ForwardWallFollow(bool sonarFacingLeft)
     //wait1Msec(1);
   }
   setMotorSpeeds(0, 0);
-  PlayImmediateTone(500, 30);
+  //PlayImmediateTone(500, 30);
 
   // Go forward a little and check that we are definately at the gap,
   // if not continue wall following
@@ -318,7 +310,7 @@ void moveOutOfStartBlock()
 
   // Unspin sonar back to start position
   wait1Msec(500);
-  rotateSonar(-360);
+  rotateSonar(-355);
 
   writeDebugStreamLine("S: %d E: %d F: %d", startIdx, endIdx, startFacingWall);
 
@@ -355,7 +347,7 @@ int determineStartPosition()
 	rotateSonar(-200);
 	rightDist = SensorValue[sonarSensor];
 	wait1Msec(500);
-	rotateSonar(100);
+	rotateSonar(90);
 
 	if (leftDist > 100 && rightDist < 100) return 1;
 	if (leftDist > 100 && rightDist > 100) return 2;
